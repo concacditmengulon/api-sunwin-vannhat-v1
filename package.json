@@ -1,19 +1,26 @@
 {
-  "name": "suunin-predict-api",
+  "name": "ai-prediction-api",
   "version": "1.0.0",
-  "description": "API for predicting Tài/Xỉu results based on historical game data",
+  "description": "API dự đoán kết quả Tài Xỉu dựa trên thuật toán AI tổng hợp",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
+  "keywords": [
+    "api",
+    "taixiu",
+    "prediction",
+    "ai",
+    "game"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
   "dependencies": {
     "axios": "^1.7.2",
     "express": "^4.19.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
-  },
-  "author": "",
-  "license": "ISC"
+  }
 }
