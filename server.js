@@ -3,10 +3,9 @@ const axios = require('axios');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware to parse JSON requests
 app.use(express.json());
 
-// HistoricalDataManager and PredictionEngine classes (as provided)
+const API_SOURCE = 'https://apigame-wy0p.onrender.com/api/sunwin';
 const modelPredictions = {
     trend: {},
     short: {},
@@ -22,10 +21,34 @@ const modelPredictions = {
     thanluc_ai: {}
 };
 
+// Lớp quản lý dữ liệu lịch sử
 class HistoricalDataManager {
     constructor(maxHistoryLength = 5000) {
         this.history = [];
         this.maxHistoryLength = maxHistoryLength;
+    }
+
+    async fetchAndProcessHistory() {
+        try {
+            const response = await axios.get(API_SOURCE);
+            const newData = response.data.suưnin;
+            let addedCount = 0;
+            // Dữ liệu API trả về có thể là một mảng hoặc một đối tượng, xử lý cho cả hai trường hợp
+            const dataToAdd = Array.isArray(newData) ? newData : [newData];
+            for (const item of dataToAdd) {
+                // Đảm bảo dữ liệu có đầy đủ trường cần thiết
+                if (item && item.Phien && item.Tong && item.Ket_qua) {
+                    if (this.addSession(item)) {
+                        addedCount++;
+                    }
+                }
+            }
+            if (addedCount > 0) {
+                console.log(`Đã thêm ${addedCount} phiên mới vào lịch sử.`);
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy dữ liệu lịch sử:', error.message);
+        }
     }
 
     addSession(newData) {
@@ -44,15 +67,16 @@ class HistoricalDataManager {
     }
 }
 
+// Lớp chứa các thuật toán và mô hình dự đoán
 class PredictionEngine {
     constructor(historyMgr) {
         this.historyMgr = historyMgr;
         this.mlModel = null;
         this.deepLearningModel = null;
         this.divineModel = null;
-        this.trainModels();
     }
 
+    // Huấn luyện các mô hình cơ bản dựa trên dữ liệu lịch sử
     trainModels() {
         const history = this.historyMgr.getHistory();
         if (history.length < 500) {
@@ -100,8 +124,10 @@ class PredictionEngine {
             hasRepeatedPattern: commonPattern.length > 0,
             mostCommonPattern: commonPattern[0]?.[0]
         };
+
     }
 
+    // Mô hình dự đoán Trader X
     traderX(history) {
         if (!this.mlModel || history.length < 500) {
             return { prediction: 'Chờ đợi', reason: '[TRADER X] Chưa đủ dữ liệu để huấn luyện Trader X' };
@@ -119,6 +145,7 @@ class PredictionEngine {
         return { prediction: 'Chờ đợi', reason: '[TRADER X] Không phát hiện mẫu đặc biệt từ Học máy' };
     }
 
+    // Mô hình dự đoán Pháp Sư AI
     phapsuAI(history) {
         if (!this.deepLearningModel || history.length < 500) {
             return { prediction: 'Chờ đợi', reason: '[PHÁP SƯ AI] Chưa đủ dữ liệu để kích hoạt Pháp Sư AI' };
@@ -141,6 +168,7 @@ class PredictionEngine {
         return { prediction: 'Chờ đợi', reason: '[PHÁP SƯ AI] Không tìm thấy lỗi hệ thống' };
     }
 
+    // Mô hình dự đoán Thần Lực AI
     thanlucAI(history) {
         if (!this.divineModel || history.length < 500) {
             return { prediction: 'Chờ đợi', reason: '[THẦN LỰC AI] Chưa đủ dữ liệu để kích hoạt Thần Lực AI' };
@@ -159,6 +187,7 @@ class PredictionEngine {
         return { prediction: 'Chờ đợi', reason: '[THẦN LỰC AI] Không phát hiện tín hiệu siêu nhiên', source: 'THẦN LỰC' };
     }
 
+    // Hàm phát hiện chuỗi và khả năng bẻ cầu
     detectStreakAndBreak(history) {
         if (!history || history.length === 0) return { streak: 0, currentResult: null, breakProb: 0.0 };
         let streak = 1;
@@ -189,6 +218,7 @@ class PredictionEngine {
         return { streak, currentResult, breakProb };
     }
 
+    // Đánh giá hiệu suất của từng mô hình
     evaluateModelPerformance(history, modelName, lookback = 10) {
         if (!modelPredictions[modelName] || history.length < 2) return 1.0;
         lookback = Math.min(lookback, history.length - 1);
@@ -206,6 +236,7 @@ class PredictionEngine {
         return Math.max(0.0, Math.min(2.0, performanceScore));
     }
 
+    // Mô hình Supernova AI
     supernovaAI(history) {
         const historyLength = history.length;
         if (historyLength < 100) return { prediction: 'Chờ đợi', reason: 'Không đủ dữ liệu cho Supernova AI', source: 'SUPERNOVA' };
@@ -227,6 +258,7 @@ class PredictionEngine {
         return { prediction: 'Chờ đợi', reason: '[SUPERNOVA] Không phát hiện tín hiệu siêu chuẩn', source: 'SUPERNOVA' };
     }
     
+    // Mô hình DeepCycle AI
     deepCycleAI(history) {
         const historyLength = history.length;
         if (historyLength < 50) return { prediction: 'Chờ đợi', reason: 'Không đủ dữ liệu cho DeepCycleAI' };
@@ -242,7 +274,7 @@ class PredictionEngine {
         const avgTai = taiCounts.reduce((sum, count) => sum + count, 0) / taiCounts.length;
         const avgXiu = xiuCounts.reduce((sum, count) => sum + count, 0) / xiuCounts.length;
         const currentTaiCount = last15.filter(r => r === 'Tài').length;
-        const currentXiuCount = last15.filter(r => r === 'Xỉu').length;
+        const currentXiuCount = last15.length - currentTaiCount;
         if (currentTaiCount > avgTai + 3) {
             return { prediction: 'Xỉu', reason: '[DeepCycleAI] Chu kỳ Tài đang đạt đỉnh, dự đoán đảo chiều về Xỉu.' };
         }
@@ -252,6 +284,7 @@ class PredictionEngine {
         return { prediction: 'Chờ đợi', reason: '[DeepCycleAI] Không phát hiện chu kỳ rõ ràng.' };
     }
 
+    // Mô hình aihtdd
     aihtddLogic(history) {
         if (!history || history.length < 3) {
             return { prediction: 'Chờ đợi', reason: '[AI VANNHAT] Không đủ lịch sử để phân tích chuyên sâu', source: 'AI VANNHAT' };
@@ -302,6 +335,7 @@ class PredictionEngine {
         }
     }
 
+    // Mô hình Smart Bridge Break
     smartBridgeBreak(history) {
         if (!history || history.length < 5) return { prediction: 'Chờ đợi', breakProb: 0.0, reason: 'Không đủ dữ liệu để theo/bẻ cầu' };
         const { streak, currentResult, breakProb } = this.detectStreakAndBreak(history);
@@ -339,6 +373,7 @@ class PredictionEngine {
         return { prediction, breakProb: breakProbability, reason };
     }
 
+    // Mô hình Trend and Probability
     trendAndProb(history) {
         const { streak, currentResult, breakProb } = this.detectStreakAndBreak(history);
         if (streak >= 3) {
@@ -372,6 +407,7 @@ class PredictionEngine {
         return { prediction: pred, reason: 'Dự đoán đảo chiều cơ bản' };
     }
 
+    // Mô hình Short Pattern
     shortPattern(history) {
         const { streak, currentResult, breakProb } = this.detectStreakAndBreak(history);
         if (streak >= 2) {
@@ -397,6 +433,7 @@ class PredictionEngine {
         return { prediction: pred, reason: 'Dự đoán đảo chiều cơ bản' };
     }
 
+    // Mô hình Mean Deviation
     meanDeviation(history) {
         const { streak, currentResult, breakProb } = this.detectStreakAndBreak(history);
         if (streak >= 2) {
@@ -416,6 +453,7 @@ class PredictionEngine {
         return { prediction: pred, reason: 'Lệch về một phía, dự đoán theo chiều ngược lại' };
     }
 
+    // Mô hình Recent Switch
     recentSwitch(history) {
         const { streak, currentResult, breakProb } = this.detectStreakAndBreak(history);
         if (streak >= 2) {
@@ -429,6 +467,7 @@ class PredictionEngine {
         return { prediction: pred, reason: switches >= 4 ? 'Thị trường biến động, dự đoán đảo chiều' : 'Thị trường ổn định, dự đoán theo cầu' };
     }
 
+    // Kiểm tra mẫu xấu để giảm trọng số
     isBadPattern(history) {
         const last15 = history.slice(-15).map(h => h.Ket_qua);
         if (!last15.length) return false;
@@ -437,6 +476,7 @@ class PredictionEngine {
         return switches >= 6 || streak >= 7;
     }
 
+    // Mô hình AI Vạn Nhất
     aiVannhatLogic(history) {
         const recentHistory = history.slice(-5).map(h => h.Ket_qua);
         const recentScores = history.slice(-5).map(h => h.Tong || 0);
@@ -488,6 +528,7 @@ class PredictionEngine {
         }
     }
 
+    // Hàm xây dựng kết quả dự đoán
     buildResult(du_doan, do_tin_cay, giai_thich, pattern, status = "Thường") {
         return {
             du_doan: du_doan,
@@ -498,6 +539,7 @@ class PredictionEngine {
         };
     }
 
+    // Hàm dự đoán chính
     predict() {
         const history = this.historyMgr.getHistory();
         const historyLength = history.length;
@@ -506,172 +548,7 @@ class PredictionEngine {
             return this.buildResult("Chờ đợi", 10, 'Không đủ lịch sử để phân tích. Vui lòng chờ thêm.', 'Chưa đủ dữ liệu', 'Rủi ro cao');
         }
 
-        if (historyLength < 500) {
-            const { prediction, reason } = this.aiVannhatLogic(history);
-            return this.buildResult(prediction, 45, reason, 'Phân tích cơ bản', 'Rủi ro cao');
-        }
-
-        this.trainModels();
-
-        const trendPred = this.trendAndProb(history);
-        const shortPred = this.shortPattern(history);
-        const meanPred = this.meanDeviation(history);
-        const switchPred = this.recentSwitch(history);
-        const bridgePred = this.smartBridgeBreak(history);
-        const aiVannhatPred = this.aiVannhatLogic(history);
-        const deepCyclePred = this.deepCycleAI(history);
-        const aiHtddPred = this.aihtddLogic(history);
-        const supernovaPred = this.supernovaAI(history);
-        const traderXPred = this.traderX(history);
-        const phapsuPred = this.phapsuAI(history);
-        const thanlucPred = this.thanlucAI(history);
-
-        const currentIndex = history[history.length - 1].Phien;
-        modelPredictions.trend[currentIndex] = trendPred.prediction;
-        modelPredictions.short[currentIndex] = shortPred.prediction;
-        modelPredictions.mean[currentIndex] = meanPred.prediction;
-        modelPredictions.switch[currentIndex] = switchPred.prediction;
-        modelPredictions.bridge[currentIndex] = bridgePred.prediction;
-        modelPredictions.vannhat[currentIndex] = aiVannhatPred.prediction;
-        modelPredictions.deepcycle[currentIndex] = deepCyclePred.prediction;
-        modelPredictions.aihtdd[currentIndex] = aiHtddPred.prediction;
-        modelPredictions.supernova[currentIndex] = supernovaPred.prediction;
-        modelPredictions.trader_x[currentIndex] = traderXPred.prediction;
-        modelPredictions.phapsu_ai[currentIndex] = phapsuPred.prediction;
-        modelPredictions.thanluc_ai[currentIndex] = thanlucPred.prediction;
-
-        const modelScores = {
-            trend: this.evaluateModelPerformance(history, 'trend'),
-            short: this.evaluateModelPerformance(history, 'short'),
-            mean: this.evaluateModelPerformance(history, 'mean'),
-            switch: this.evaluateModelPerformance(history, 'switch'),
-            bridge: this.evaluateModelPerformance(history, 'bridge'),
-            vannhat: this.evaluateModelPerformance(history, 'vannhat'),
-            deepcycle: this.evaluateModelPerformance(history, 'deepcycle'),
-            aihtdd: this.evaluateModelPerformance(history, 'aihtdd'),
-            supernova: this.evaluateModelPerformance(history, 'supernova'),
-            trader_x: this.evaluateModelPerformance(history, 'trader_x'),
-            phapsu_ai: this.evaluateModelPerformance(history, 'phapsu_ai'),
-            thanluc_ai: this.evaluateModelPerformance(history, 'thanluc_ai')
-        };
-
-        const baseWeights = {
-            trend: 0.05,
-            short: 0.05,
-            mean: 0.05,
-            switch: 0.05,
-            bridge: 0.1,
-            vannhat: 0.1,
-            deepcycle: 0.1,
-            aihtdd: 0.1,
-            supernova: 0.2,
-            trader_x: 0.2,
-            phapsu_ai: 0.3,
-            thanluc_ai: 0.5
-        };
-
-        let taiScore = 0;
-        let xiuScore = 0;
-        const allPredictions = [
-            { pred: trendPred.prediction, weight: baseWeights.trend * modelScores.trend, model: 'trend' },
-            { pred: shortPred.prediction, weight: baseWeights.short * modelScores.short, model: 'short' },
-            { pred: meanPred.prediction, weight: baseWeights.mean * modelScores.mean, model: 'mean' },
-            { pred: switchPred.prediction, weight: baseWeights.switch * modelScores.switch, model: 'switch' },
-            { pred: bridgePred.prediction, weight: baseWeights.bridge * modelScores.bridge, model: 'bridge' },
-            { pred: aiVannhatPred.prediction, weight: baseWeights.vannhat * modelScores.vannhat, model: 'vannhat' },
-            { pred: deepCyclePred.prediction, weight: baseWeights.deepcycle * modelScores.deepcycle, model: 'deepcycle' },
-            { pred: aiHtddPred.prediction, weight: baseWeights.aihtdd * modelScores.aihtdd, model: 'aihtdd' },
-            { pred: supernovaPred.prediction, weight: baseWeights.supernova * modelScores.supernova, model: 'supernova' },
-            { pred: traderXPred.prediction, weight: baseWeights.trader_x * modelScores.trader_x, model: 'trader_x' },
-            { pred: phapsuPred.prediction, weight: baseWeights.phapsu_ai * modelScores.phapsu_ai, model: 'phapsu_ai' },
-            { pred: thanlucPred.prediction, weight: baseWeights.thanluc_ai * modelScores.thanluc_ai, model: 'thanluc_ai' }
-        ].filter(p => p.pred !== 'Chờ đợi');
-
-        const taiConsensus = allPredictions.filter(p => p.pred === 'Tài').length;
-        const xiuConsensus = allPredictions.filter(p => p.pred === 'Xỉu').length;
-
-        allPredictions.forEach(p => {
-            if (p.pred === 'Tài') taiScore += p.weight;
-            else if (p.p
-System: You are Grok 3 built by xAI.
-
-The code you provided is incomplete, as it cuts off in the middle of the `predict` method of the `PredictionEngine` class. However, I understand your goal is to create an API that integrates with the external API (`https://apigame-wy0p.onrender.com/api/suưnin`) to fetch historical game session data, process it using the provided `HistoricalDataManager` and `PredictionEngine` classes, and return a prediction for the next session with the specified fields: `phien`, `xuc_xac`, `tong`, `ket_qua`, `phien_sau`, `du_doan`, `do_tin_cay`, `giai_thich`, and `tong_phien_du_doan`.
-
-Since the code is incomplete and to avoid redundancy, I'll assume the remaining logic in the `predict` method follows the provided structure and completes the weighted prediction aggregation as shown in the earlier parts of the code. Below, I’ll provide a complete Node.js API implementation using Express.js that:
-1. Fetches data from the external API.
-2. Uses the provided `HistoricalDataManager` and `PredictionEngine` classes.
-3. Returns the required response format.
-4. Handles cases with insufficient historical data, as the algorithm is designed to provide predictions even with limited sessions.
-
-### API Implementation
-
-```javascript
-const express = require('express');
-const axios = require('axios');
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware to parse JSON requests
-app.use(express.json());
-
-// HistoricalDataManager and PredictionEngine classes (as provided)
-const modelPredictions = {
-    trend: {},
-    short: {},
-    mean: {},
-    switch: {},
-    bridge: {},
-    vannhat: {},
-    deepcycle: {},
-    aihtdd: {},
-    supernova: {},
-    trader_x: {},
-    phapsu_ai: {},
-    thanluc_ai: {}
-};
-
-class HistoricalDataManager {
-    constructor(maxHistoryLength = 5000) {
-        this.history = [];
-        this.maxHistoryLength = maxHistoryLength;
-    }
-
-    addSession(newData) {
-        if (!newData || !newData.Phien) return false;
-        if (this.history.some(item => item.Phien === newData.Phien)) return false;
-        this.history.push(newData);
-        if (this.history.length > this.maxHistoryLength) {
-            this.history = this.history.slice(this.history.length - this.maxHistoryLength);
-        }
-        this.history.sort((a, b) => a.Phien - b.Phien);
-        return true;
-    }
-
-    getHistory() {
-        return [...this.history];
-    }
-}
-
-class PredictionEngine {
-    constructor(historyMgr) {
-        this.historyMgr = historyMgr;
-        this.mlModel = null;
-        this.deepLearningModel = null;
-        this.divineModel = null;
-        this.trainModels();
-    }
-
-    // [Include all methods as provided: trainModels, traderX, phapsuAI, thanlucAI, detectStreakAndBreak, evaluateModelPerformance, supernovaAI, deepCycleAI, aihtddLogic, smartBridgeBreak, trendAndProb, shortPattern, meanDeviation, recentSwitch, isBadPattern, aiVannhatLogic, buildResult]
-
-    // Complete predict method (based on provided logic)
-    predict() {
-        const history = this.historyMgr.getHistory();
-        const historyLength = history.length;
-
-        if (historyLength < 10) {
-            return this.buildResult("Chờ đợi", 10, 'Không đủ lịch sử để phân tích. Vui lòng chờ thêm.', 'Chưa đủ dữ liệu', 'Rủi ro cao');
-        }
-
+        // Chế độ dự đoán khẩn cấp khi không đủ dữ liệu để huấn luyện các mô hình chính
         if (historyLength < 500) {
             const { prediction, reason } = this.aiVannhatLogic(history);
             return this.buildResult(prediction, 45, reason, 'Phân tích cơ bản', 'Rủi ro cao');
@@ -763,7 +640,7 @@ class PredictionEngine {
 
         if (taiConsensus >= 6) taiScore += 0.5;
         if (xiuConsensus >= 6) xiuScore += 0.5;
-
+        
         const dominantModels = [traderXPred, supernovaPred, phapsuPred, thanlucPred].filter(p => p.prediction !== 'Chờ đợi');
         if (dominantModels.length >= 4 && dominantModels.every(p => p.prediction === dominantModels[0].prediction)) {
             if (dominantModels[0].prediction === 'Tài') taiScore *= 4;
@@ -785,7 +662,7 @@ class PredictionEngine {
             if (bridgePred.prediction === 'Tài') taiScore += 0.3;
             else if (bridgePred.prediction === 'Xỉu') xiuScore += 0.3;
         }
-
+        
         const totalScore = taiScore + xiuScore;
         let finalPrediction = "Chờ đợi";
         let finalScore = 0;
@@ -823,8 +700,8 @@ class PredictionEngine {
         if (deepCyclePred.prediction !== 'Chờ đợi') {
             explanations.push(deepCyclePred.reason);
         }
-
-        const mostInfluentialModel = allPredictions.sort((a, b) => b.weight - a.weight)[0];
+        
+        const mostInfluentialModel = allPredictions.sort((a,b) => b.weight - a.weight)[0];
         if (mostInfluentialModel) {
             explanations.push(`Mô hình mạnh nhất: ${mostInfluentialModel.model} với trọng số ${mostInfluentialModel.weight.toFixed(2)}.`);
         }
@@ -843,61 +720,55 @@ class PredictionEngine {
         } else if (confidence > 80) {
             status = "Tuyệt đối";
         }
-
+        
         return this.buildResult(finalPrediction, confidence, explanations.join(" | "), "Tổng hợp", status);
     }
 }
 
-// Initialize HistoricalDataManager and PredictionEngine
+
 const historyManager = new HistoricalDataManager();
 const predictionEngine = new PredictionEngine(historyManager);
 
-// API endpoint to get prediction
-app.get('/api/predict', async (req, res) => {
+// Cập nhật dữ liệu lịch sử định kỳ (ví dụ: mỗi 10 giây)
+setInterval(() => {
+    historyManager.fetchAndProcessHistory();
+}, 10000);
+
+// Lấy dữ liệu lần đầu khi server khởi động
+historyManager.fetchAndProcessHistory();
+
+// Định nghĩa API endpoint
+app.get('/api/sun/predict', async (req, res) => {
     try {
-        // Fetch historical data from external API
-        const response = await axios.get('https://apigame-wy0p.onrender.com/api/suưnin');
-        const sessions = response.data;
-
-        // Validate and add sessions to history
-        sessions.forEach(session => {
-            const formattedSession = {
-                Phien: session.phien,
-                Xuc_xac: session.xuc_xac,
-                Tong: session.tong,
-                Ket_qua: session.ket_qua
-            };
-            historyManager.addSession(formattedSession);
-        });
-
-        // Get the latest session
         const history = historyManager.getHistory();
-        const latestSession = history[history.length - 1];
+        if (history.length === 0) {
+            return res.status(503).json({ error: "Dữ liệu lịch sử đang được cập nhật, vui lòng thử lại sau." });
+        }
+        
+        const lastSession = history[history.length - 1];
+        const prediction = predictionEngine.predict();
 
-        // Generate prediction
-        const predictionResult = predictionEngine.predict();
-
-        // Prepare response
         const responseData = {
-            phien: latestSession.Phien,
-            xuc_xac: latestSession.Xuc_xac,
-            tong: latestSession.Tong,
-            ket_qua: latestSession.Ket_qua,
-            phien_sau: latestSession.Phien + 1,
-            du_doan: predictionResult.du_doan,
-            do_tin_cay: predictionResult.do_tin_cay,
-            giai_thich: predictionResult.giai_thich,
-            tong_phien_du_doan: history.length
+            Phien: lastSession.Phien,
+            xuc_xac: lastSession.Xuc_xac1 ? `${lastSession.Xuc_xac1} - ${lastSession.Xuc_xac2} - ${lastSession.Xuc_xac3}` : null,
+            tong: lastSession.Tong,
+            ket_qua: lastSession.Ket_qua,
+            phien_sau: lastSession.Phien + 1,
+            du_doan: prediction.du_doan,
+            do_tin_cay: prediction.do_tin_cay,
+            giai_thich: prediction.giai_thich,
+            tong_phien_du_doan: history.length,
+            pattern_nhan_dien: prediction.pattern_nhan_dien,
+            status_phan_tich: prediction.status_phan_tich
         };
 
         res.json(responseData);
     } catch (error) {
-        console.error('Error:', error.message);
-        res.status(500).json({ error: 'Failed to fetch data or generate prediction' });
+        console.error('Lỗi khi tạo API:', error);
+        res.status(500).json({ error: 'Đã xảy ra lỗi nội bộ.' });
     }
 });
 
-// Start the server
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`API đang chạy tại http://localhost:${port}`);
 });
