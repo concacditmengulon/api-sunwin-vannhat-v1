@@ -5,6 +5,9 @@ const PORT = process.env.PORT || 3000;
 
 // ==================== START: VANNHAT ALGORITHM CODE ====================
 
+// ... (Giữ nguyên toàn bộ các hàm thuật toán của bạn ở đây)
+// ... (detectStreakAndBreak, evaluateModelPerformance, smartBridgeBreak, v.v...)
+
 let modelPredictions = {};
 
 function detectStreakAndBreak(history) {
@@ -458,37 +461,50 @@ function generatePrediction(history, predictions) {
 
 // ==================== END: VANNHAT ALGORITHM CODE ====================
 
+// Hàm fetchWithRetry để tự động thử lại khi gặp lỗi
+async function fetchWithRetry(url, retries = 3, delay = 2000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await axios.get(url);
+            return response;
+        } catch (error) {
+            console.error(`Lỗi khi lấy dữ liệu từ API gốc (lần ${i + 1}/${retries}):`, error.message);
+            if (i < retries - 1) {
+                await new Promise(res => setTimeout(res, delay));
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
 // API Endpoint
 app.get('/api/sunwin', async (req, res) => {
     try {
-        const response = await axios.get('https://binhtool90-sunpredict.onrender.com/api/taixiu/history');
+        // Sử dụng hàm fetchWithRetry để gọi API gốc
+        const response = await fetchWithRetry('https://binhtool90-sunpredict.onrender.com/api/taixiu/history');
         const historyData = response.data.history;
 
         if (!historyData || historyData.length === 0) {
             return res.status(500).json({
                 status: "error",
-                message: "Không thể lấy dữ liệu lịch sử từ API gốc."
+                message: "Dữ liệu lịch sử rỗng hoặc không hợp lệ từ API gốc."
             });
         }
         
-        // Sắp xếp dữ liệu theo session tăng dần để đảm bảo đúng thứ tự
         historyData.sort((a, b) => parseInt(a.session) - parseInt(b.session));
 
-        // Lấy dữ liệu phiên cuối cùng
         const lastSession = historyData[historyData.length - 1];
-
-        // Tạo dự đoán cho phiên tiếp theo
         const predictionResult = generatePrediction(historyData);
         const nextSession = parseInt(lastSession.session) + 1;
 
-        // Xây dựng response API mới
         const apiResponse = {
             phien_truoc: lastSession.session,
             xuc_xac: lastSession.dice,
             tong: lastSession.total,
             ket_qua: lastSession.result,
             phien_sau: nextSession,
-            du_doan: `PREDICTION: ${predictionResult.prediction}`,
+            du_doan: `VANNHAT AI VIP PREDICTION: ${predictionResult.prediction}`,
             do_tin_cay: `Độ tin cậy: ${predictionResult.confidence.toFixed(2)}%`,
             giai_thich: predictionResult.reason,
             tong_phien_du_doan: nextSession
@@ -501,10 +517,11 @@ app.get('/api/sunwin', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Lỗi khi xử lý API:', error.message);
-        res.status(500).json({
+        console.error('Lỗi nghiêm trọng khi xử lý API:', error.message);
+        res.status(503).json({
             status: "error",
-            message: "Có lỗi xảy ra khi xử lý yêu cầu."
+            message: "Có lỗi xảy ra khi lấy dữ liệu từ nguồn gốc sau nhiều lần thử. Vui lòng thử lại sau.",
+            data: null
         });
     }
 });
