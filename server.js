@@ -1,15 +1,16 @@
-Const Fastify = require("fastify");
+const Fastify = require("fastify");
 const cors = require("@fastify/cors");
 const WebSocket = require("ws");
 const fs = require("fs");
 const path = require("path");
 
+// ==================== Cấu hình cơ bản ====================
 const TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJhcGlzdW53aW52YyIsImJvdCI6MCwiaXNNZXJjaGFudCI6ZmFsc2UsInZlcmlmaWVkQmFua0FjY291bnQiOmZhbHNlLCJwbGF5RXZlbnRMb2JieSI6ZmFsc2UsImN1c3RvbWVySWQiOjI3NjQ3ODE3MywiYWZmSWQiOiJkOTNkM2Q4NC1mMDY5LTRiM2YtOGRhYy1iNDcxNmE4MTIxNDMiLCJiYW5uZWQiOmZhbHNlLCJicmFuZCI6InN1bi53aW4iLCJ0aW1lc3RhbXAiOjE3NTM0NDM3MjM2NjIsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjAwMTplZTA6NTcwODo3NzAwOjhhZjM6YWJkMTpmZTJhOmM2MmMiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzIwLnBuZyIsInBsYXRmb3JtSWQiOjUsInVzZXJJZCI6ImQ5M2QzZDg0LWYwNjktNGIzZi04ZGFjLWI0NzE2YTgxMjE0MyIsInJlZ1RpbWUiOjE3NTIwNDU4OTMyOTIsInBob25lIjoiIiwiZGVwb3NpdCI6ZmFsc2UsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.a-KRvIGfMqxtBq3WenudxP8pFx7mxj33iIZm-AklInk";
-
 const fastify = Fastify({ logger: false });
 const PORT = process.env.PORT || 3001;
 const HISTORY_FILE = path.join(__dirname, 'taixiu_history.json');
 
+// Biến toàn cục để lưu trữ dữ liệu
 let rikResults = [];
 let rikCurrentSession = null;
 let rikWS = null;
@@ -44,21 +45,26 @@ function decodeBinaryMessage(buffer) {
   try {
     const str = buffer.toString();
     if (str.startsWith("[")) return JSON.parse(str);
-    let position = 0, result = [];
+    let position = 0;
+    let result = [];
     while (position < buffer.length) {
       const type = buffer.readUInt8(position++);
       if (type === 1) {
-        const len = buffer.readUInt16BE(position); position += 2;
+        const len = buffer.readUInt16BE(position);
+        position += 2;
         result.push(buffer.toString('utf8', position, position + len));
         position += len;
       } else if (type === 2) {
-        result.push(buffer.readInt32BE(position)); position += 4;
+        result.push(buffer.readInt32BE(position));
+        position += 4;
       } else if (type === 3 || type === 4) {
-        const len = buffer.readUInt16BE(position); position += 2;
+        const len = buffer.readUInt16BE(position);
+        position += 2;
         result.push(JSON.parse(buffer.toString('utf8', position, position + len)));
         position += len;
       } else {
-        console.warn("Unknown binary type:", type); break;
+        console.warn("Unknown binary type:", type);
+        break;
       }
     }
     return result.length === 1 ? result[0] : result;
@@ -68,7 +74,7 @@ function decodeBinaryMessage(buffer) {
   }
 }
 
-// ==================== Thuật toán dự đoán mới của VANNHAT ====================
+// ==================== Thuật toán dự đoán của VANNHAT ====================
 function detectStreakAndBreak(history) {
   if (!history || history.length === 0) return { streak: 0, currentResult: null, breakProb: 0 };
   let streak = 1;
@@ -354,28 +360,29 @@ function connectRikWebSocket() {
   rikWS = new WebSocket(`wss://websocket.azhkthg1.net/websocket?token=${TOKEN}`);
   rikWS.on("open", () => {
     const authPayload = [
-  1,
-  "MiniGame",
-  "SC_apisunwin123",
-  "binhlamtool90",
-  {
-    info: JSON.stringify({
-      ipAddress: "2001:ee0:5708:7700:8af3:abd1:fe2a:c62c",
-      wsToken: TOKEN,
-      userId: "d93d3d84-f069-4b3f-8dac-b4716a812143",
-      username: "SC_apisunwin123",
-      timestamp: 1753443723662,
-      refreshToken: "dd38d05401bb48b4ac3c2f6dc37f36d9.f22dccad89bb4e039814b7de64b05d63",
-    }),
-    signature: "4FD3165D59BD21DA76B4448EA62E81972BCD54BE0EDBC5291D2415274DA522089BF9318E829A67D07EC7873543D17E75671CBD6FDF60B42B55643F13B66DEB7B0510DE995A8C7C8EDBA4990CE3294C4340D86BF78B02A0E90C6565D1A32EAA894F7384302602CB2703C20981244103E42817257592D42828D6EDB0BB781ADA1",
-    pid: 5,
-    subi: true
-  }
-];
+      1,
+      "MiniGame",
+      "SC_apisunwin123",
+      "binhlamtool90",
+      {
+        info: JSON.stringify({
+          ipAddress: "2001:ee0:5708:7700:8af3:abd1:fe2a:c62c",
+          wsToken: TOKEN,
+          userId: "d93d3d84-f069-4b3f-8dac-b4716a812143",
+          username: "SC_apisunwin123",
+          timestamp: 1753443723662,
+          refreshToken: "dd38d05401bb48b4ac3c2f6dc37f36d9.f22dccad89bb4e039814b7de64b05d63",
+        }),
+        signature: "4FD3165D59BD21DA76B4448EA62E81972BCD54BE0EDBC5291D2415274DA522089BF9318E829A67D07EC78783543D17E75671CBD6FDF60B42B55643F13B66DEB7B0510DE995A8C7C8EDBA4990CE3294C4340D86BF78B02A0E90C6565D1A32EAA894F7384302602CB2703C20981244103E42817257592D42828D6EDB0BB781ADA1",
+        pid: 5,
+        subi: true
+      }
+    ];
     rikWS.send(JSON.stringify(authPayload));
     clearInterval(rikIntervalCmd);
     rikIntervalCmd = setInterval(sendRikCmd1005, 5000);
   });
+
   rikWS.on("message", (data) => {
     try {
       const json = typeof data === 'string' ? JSON.parse(data) : decodeBinaryMessage(data);
@@ -401,21 +408,25 @@ function connectRikWebSocket() {
       console.error("❌ Parse error:", e.message);
     }
   });
+
   rikWS.on("close", () => {
     console.log("🔌 WebSocket disconnected. Reconnecting...");
     setTimeout(connectRikWebSocket, 5000);
   });
+
   rikWS.on("error", (err) => {
     console.error("🔌 WebSocket error:", err.message);
     rikWS.close();
   });
 }
+
+// ==================== Khởi tạo ứng dụng và API ====================
 loadHistory();
 connectRikWebSocket();
 fastify.register(cors);
 
-// ==================== API Route cho dự đoán Tài Xỉu ====================
-fastify.get("/api/taixiu/sunwin", async () => {
+// API Route cho dự đoán Tài Xỉu
+fastify.get("/api/taixiu/sunwin", async (request, reply) => {
   const valid = rikResults.filter(r => r.d1 && r.d2 && r.d3).map(i => ({
     session: i.sid,
     dice: [i.d1, i.d2, i.d3],
@@ -423,8 +434,10 @@ fastify.get("/api/taixiu/sunwin", async () => {
     result: getTX(i.d1, i.d2, i.d3),
     score: i.d1 + i.d2 + i.d3
   }));
-  if (!valid.length) return { message: "Không có dữ liệu." };
-
+  if (!valid.length) {
+    reply.status(404).send({ message: "Không có dữ liệu." });
+    return;
+  }
   const current = valid[0];
   const phien_sau = current.session + 1;
   const prediction = generatePrediction(valid, modelPredictions);
@@ -443,18 +456,23 @@ fastify.get("/api/taixiu/sunwin", async () => {
   };
 });
 
-// ==================== API Route cho lịch sử ====================
-fastify.get("/api/taixiu/history", async () => {
+// API Route cho lịch sử
+fastify.get("/api/taixiu/history", async (request, reply) => {
   const valid = rikResults.filter(r => r.d1 && r.d2 && r.d3);
-  if (!valid.length) return { message: "Không có dữ liệu lịch sử." };
-  return valid.map(i => ({
+  if (!valid.length) {
+    reply.status(404).send({ message: "Không có dữ liệu lịch sử." });
+    return;
+  }
+  const historyData = valid.map(i => ({
     session: i.sid,
     dice: [i.d1, i.d2, i.d3],
     total: i.d1 + i.d2 + i.d3,
     result: getTX(i.d1, i.d2, i.d3)
   })).map(JSON.stringify).join("\n");
+  reply.header('Content-Type', 'text/plain; charset=utf-8').send(historyData);
 });
 
+// Khởi động server
 const start = async () => {
   try {
     const address = await fastify.listen({ port: PORT, host: "0.0.0.0" });
