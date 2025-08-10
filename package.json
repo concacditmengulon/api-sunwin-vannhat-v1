@@ -1,7 +1,7 @@
 {
-  "name": "sunwin-taixiu-bot",
+  "name": "sunwin-taixiu-bot-v1",
   "version": "1.0.0",
-  "description": "A WebSocket bot to track and predict Sunwin Tài Xỉu results.",
+  "description": "A basic WebSocket bot to track and predict Sunwin Tài Xỉu results.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
