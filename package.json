@@ -1,12 +1,13 @@
 {
-  "name": "sunwin-taixiu-bot-v1",
+  "name": "sunwin-taixiu-fastify-bot",
   "version": "1.0.0",
-  "description": "A basic WebSocket bot to track and predict Sunwin Tài Xỉu results.",
+  "description": "An advanced WebSocket bot using Fastify to track and predict Sunwin Tài Xỉu results.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "keywords": [
+    "fastify",
     "websocket",
     "taixiu",
     "sunwin",
@@ -16,8 +17,8 @@
   "author": "cstool001",
   "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
+    "@fastify/cors": "^9.0.1",
+    "fastify": "^4.28.0",
     "ws": "^8.18.0"
   },
   "engines": {
